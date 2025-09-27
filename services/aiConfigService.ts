@@ -50,6 +50,9 @@ export const DEFAULT_CONFIGS: AllAIConfigs = {
 - 口調・雰囲気: {{tone}}
 - 文字の装飾: {{decoration}}
 - 15文字以内の短いテキスト
+
+# 追加の指示
+{{customPrompt}}
 `,
   },
   [AITask.STICKER_IMAGE]: {
@@ -64,9 +67,13 @@ export const DEFAULT_CONFIGS: AllAIConfigs = {
 ## スタンプのテキスト
 「{{stickerText}}」
 
+## デザインに関する追加の指示
+{{customPrompt}}
+
 ## 作成のポイント
 - キャラクターは3面図のデザインを忠実に再現してください。
 - テキストの内容に合った表情やポーズにしてください。
+- デザインに関する追加の指示がある場合は、それも考慮してください。
 - LINEスタンプとして使いやすいように、キャラクターは大きく、背景は透過または白にしてください。
 - テキストは日本語として正しく、読みやすく描画してください。
 

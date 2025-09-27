@@ -97,6 +97,7 @@ export const StickerCreationTab: React.FC<StickerCreationTabProps> = ({ initialD
   
   const [isGeneratingTones, setIsGeneratingTones] = useState(false);
   const [isGeneratingDecorations, setIsGeneratingDecorations] = useState(false);
+  const [customStickerPrompt, setCustomStickerPrompt] = useState<string>('');
 
 
   useEffect(() => {
@@ -142,7 +143,7 @@ export const StickerCreationTab: React.FC<StickerCreationTabProps> = ({ initialD
     setIsLoading(true);
     setStickers(stickers.map(s => ({...s, status: 'generating_text'})));
     try {
-        const texts = await generateStickerTexts(selectedDesign.characterDescription, stickerCount, { tone: selectedTone, decoration: selectedDecoration });
+        const texts = await generateStickerTexts(selectedDesign.characterDescription, stickerCount, { tone: selectedTone, decoration: selectedDecoration, customPrompt: customStickerPrompt });
         setStickers(prev => prev.map((sticker, index) => ({
             ...sticker,
             text: texts[index] || `テキスト${index+1}`,
@@ -169,7 +170,7 @@ export const StickerCreationTab: React.FC<StickerCreationTabProps> = ({ initialD
           const batch = processingStickers.slice(i, i + BATCH_SIZE);
           await Promise.all(batch.map(async (sticker) => {
               try {
-                  const { imageBase64, fileName } = await generateStickerImage(selectedDesign.imageBase64, sticker.text, selectedDesign.characterDescription);
+                  const { imageBase64, fileName } = await generateStickerImage(selectedDesign.imageBase64, sticker.text, selectedDesign.characterDescription, customStickerPrompt);
                   setStickers(prev => prev.map(s => s.id === sticker.id ? { ...s, image: imageBase64, fileName, status: 'done' } : s));
               } catch (e) {
                   console.error(`Error generating sticker ${sticker.id}:`, e);
@@ -353,6 +354,19 @@ export const StickerCreationTab: React.FC<StickerCreationTabProps> = ({ initialD
                 </button>
               </div>
             </div>
+          </div>
+          <div>
+            <label htmlFor="custom-sticker-prompt" className="font-semibold text-slate-300 mb-2 block text-sm">
+              デザインに関する自由な指示
+            </label>
+            <textarea
+              id="custom-sticker-prompt"
+              value={customStickerPrompt}
+              onChange={(e) => setCustomStickerPrompt(e.target.value)}
+              rows={2}
+              className="w-full p-2 bg-slate-700 border border-slate-600 rounded-md text-slate-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              placeholder="例: 全てのスタンプにキラキラしたエフェクトを追加してください。キャラクターは常に笑顔で。"
+            />
           </div>
           <div className="flex flex-wrap gap-2">
             <button onClick={handleGenerateTexts} disabled={isLoading || !selectedDesign} className="px-4 py-2 flex items-center gap-2 text-sm font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors disabled:bg-slate-500">

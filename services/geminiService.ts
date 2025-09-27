@@ -85,14 +85,15 @@ export const generateCharacterDesign = async (images: File[], settings: Characte
 export const generateStickerTexts = async (
     characterDescription: string,
     count: number,
-    settings: { tone: string, decoration: string }
+    settings: { tone: string, decoration: string, customPrompt: string }
 ): Promise<string[]> => {
     const config = aiConfigManager.getConfig(AITask.STICKER_TEXT);
     const prompt = renderTemplate(config.prompt, {
         count,
         characterDescription,
         tone: settings.tone,
-        decoration: settings.decoration
+        decoration: settings.decoration,
+        customPrompt: settings.customPrompt
     });
 
     const response = await ai.models.generateContent({
@@ -171,12 +172,14 @@ ${examples}
 export const generateStickerImage = async (
     characterImageBase64: string,
     stickerText: string,
-    characterDescription: string
+    characterDescription: string,
+    customPrompt: string
 ) => {
     const config = aiConfigManager.getConfig(AITask.STICKER_IMAGE);
     const prompt = renderTemplate(config.prompt, {
         characterDescription,
-        stickerText
+        stickerText,
+        customPrompt
     });
 
     const contents = {
