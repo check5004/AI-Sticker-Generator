@@ -1,8 +1,10 @@
+
 import React, { useState } from 'react';
 import { Header } from './components/Header';
 import { Sidebar } from './components/Sidebar';
 import { CharacterDesignTab } from './components/CharacterDesignTab';
 import { StickerCreationTab } from './components/StickerCreationTab';
+import { SettingsModal } from './components/SettingsModal';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { LOCAL_STORAGE_KEY } from './constants';
 import type { CharacterDesign } from './types';
@@ -12,6 +14,7 @@ type Tab = 'design' | 'sticker';
 function App() {
   const [activeTab, setActiveTab] = useState<Tab>('design');
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState<boolean>(false);
   const [characterDesigns, setCharacterDesigns] = useLocalStorage<CharacterDesign[]>(LOCAL_STORAGE_KEY, []);
   const [initialStickerDesign, setInitialStickerDesign] = useState<CharacterDesign | null>(null);
 
@@ -41,6 +44,11 @@ function App() {
     setIsSidebarOpen(false);
   }
 
+  const handleOpenSettings = () => {
+    setIsSidebarOpen(false);
+    setIsSettingsModalOpen(true);
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-slate-900">
       <Header 
@@ -54,6 +62,11 @@ function App() {
         characterDesigns={characterDesigns}
         onSelectDesign={handleSelectDesignFromHistory}
         onNewDesign={handleNewDesign}
+        onOpenSettings={handleOpenSettings}
+      />
+      <SettingsModal 
+        isOpen={isSettingsModalOpen}
+        onClose={() => setIsSettingsModalOpen(false)}
       />
       
       <main className="flex-grow container mx-auto p-4 sm:p-6 lg:p-8 flex flex-col min-h-0">

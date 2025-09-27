@@ -1,7 +1,7 @@
 
 import React from 'react';
 import type { CharacterDesign } from '../types';
-import { XIcon, PlusIcon, ChevronRightIcon } from './icons';
+import { XIcon, PlusIcon, ChevronRightIcon, SettingsIcon } from './icons';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -9,9 +9,10 @@ interface SidebarProps {
   characterDesigns: CharacterDesign[];
   onSelectDesign: (design: CharacterDesign) => void;
   onNewDesign: () => void;
+  onOpenSettings: () => void;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, characterDesigns, onSelectDesign, onNewDesign }) => {
+export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, characterDesigns, onSelectDesign, onNewDesign, onOpenSettings }) => {
   return (
     <>
       <div
@@ -22,7 +23,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, characterDesi
         className={`fixed top-0 left-0 h-full w-80 bg-slate-800 shadow-2xl z-50 transform transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}
       >
         <div className="flex flex-col h-full">
-          <div className="flex items-center justify-between p-4 border-b border-slate-700">
+          <div className="flex items-center justify-between p-4 border-b border-slate-700 flex-shrink-0">
             <h2 className="text-xl font-bold text-slate-100">メニュー</h2>
             <button onClick={onClose} className="p-1 text-slate-400 hover:text-slate-100 rounded-full hover:bg-slate-700">
               <XIcon className="w-6 h-6" />
@@ -64,6 +65,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, characterDesi
               </button>
               <p className="text-sm text-slate-400 text-center py-4">この機能は開発中です</p>
             </div>
+          </div>
+
+          {/* Footer */}
+          <div className="p-4 border-t border-slate-700 flex-shrink-0">
+            <button onClick={onOpenSettings} className="w-full flex items-center gap-3 px-4 py-2 text-sm font-medium text-slate-300 rounded-lg hover:bg-slate-700 transition-colors">
+              <SettingsIcon className="w-5 h-5 text-slate-400" />
+              設定
+            </button>
           </div>
         </div>
       </div>
