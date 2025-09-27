@@ -2,9 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import type { ChangeEvent } from 'react';
 import type { CharacterDesign, Sticker, StickerStatus } from '../types';
 import { TONES, TEXT_DECORATIONS } from '../constants';
-import { generateStickerTexts, generateStickerImage, fileToBase64 } from '../services/geminiService';
+import { generateStickerTexts, generateStickerImage, fileToBase64, generateSuggestions } from '../services/geminiService';
 import { Chip } from './Chip';
-import { SparklesIcon, DownloadIcon, UploadIcon } from './icons';
+import { SparklesIcon, DownloadIcon, UploadIcon, PlusIcon } from './icons';
 import { RevisionModal } from './RevisionModal';
 
 declare var JSZip: any;
@@ -80,8 +80,13 @@ export const StickerCreationTab: React.FC<StickerCreationTabProps> = ({ initialD
   const [selectedDesign, setSelectedDesign] = useState<CharacterDesign | null>(initialDesign);
   const [stickerCount, setStickerCount] = useState<number>(8);
   const [includeText, setIncludeText] = useState<boolean>(true);
+  
+  const [tones, setTones] = useState<string[]>(TONES);
+  const [textDecorations, setTextDecorations] = useState<string[]>(TEXT_DECORATIONS);
+
   const [selectedTone, setSelectedTone] = useState<string>(TONES[0]);
   const [selectedDecoration, setSelectedDecoration] = useState<string>(TEXT_DECORATIONS[0]);
+
   const [stickers, setStickers] = useState<Sticker[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -89,6 +94,10 @@ export const StickerCreationTab: React.FC<StickerCreationTabProps> = ({ initialD
 
   const [isRevisionModalOpen, setIsRevisionModalOpen] = useState(false);
   const [stickerToRevise, setStickerToRevise] = useState<Sticker | null>(null);
+  
+  const [isGeneratingTones, setIsGeneratingTones] = useState(false);
+  const [isGeneratingDecorations, setIsGeneratingDecorations] = useState(false);
+
 
   useEffect(() => {
       setSelectedDesign(initialDesign);
@@ -170,6 +179,30 @@ export const StickerCreationTab: React.FC<StickerCreationTabProps> = ({ initialD
       }
 
       setIsLoading(false);
+  };
+
+  const handleGenerateMoreSuggestions = async (type: 'tone' | 'decoration') => {
+      if (type === 'tone') {
+          setIsGeneratingTones(true);
+          try {
+              const newSuggestions = await generateSuggestions('tone', tones);
+              setTones(prev => [...prev, ...newSuggestions.filter(s => !prev.includes(s))]);
+          } catch (e) {
+              console.error("Failed to generate more tones:", e);
+          } finally {
+              setIsGeneratingTones(false);
+          }
+      } else {
+          setIsGeneratingDecorations(true);
+          try {
+              const newSuggestions = await generateSuggestions('decoration', textDecorations);
+              setTextDecorations(prev => [...prev, ...newSuggestions.filter(s => !prev.includes(s))]);
+          } catch (e) {
+              console.error("Failed to generate more decorations:", e);
+          } finally {
+              setIsGeneratingDecorations(false);
+          }
+      }
   };
 
   const handleTextChange = (id: string, text: string) => {
@@ -288,14 +321,36 @@ export const StickerCreationTab: React.FC<StickerCreationTabProps> = ({ initialD
             </div>
              <div>
               <label className="font-semibold text-slate-300 mb-2 block text-sm">口調・雰囲気</label>
-              <div className="flex flex-wrap gap-2">
-                {TONES.map(tone => <Chip key={tone} label={tone} isSelected={selectedTone === tone} onClick={() => setSelectedTone(tone)}/>)}
+              <div className="flex flex-wrap gap-2 items-center">
+                {tones.map(tone => <Chip key={tone} label={tone} isSelected={selectedTone === tone} onClick={() => setSelectedTone(tone)}/>)}
+                <button
+                  onClick={() => handleGenerateMoreSuggestions('tone')}
+                  disabled={isGeneratingTones}
+                  className="p-1.5 bg-slate-700 text-slate-300 rounded-full hover:bg-slate-600 transition-colors disabled:opacity-50 disabled:cursor-wait"
+                  aria-label="Generate more tones"
+                >
+                  {isGeneratingTones ?
+                    <div className="w-4 h-4 border-2 border-slate-400 border-t-transparent rounded-full animate-spin"></div> :
+                    <PlusIcon className="w-4 h-4"/>
+                  }
+                </button>
               </div>
             </div>
             <div>
               <label className="font-semibold text-slate-300 mb-2 block text-sm">文字の装飾</label>
-              <div className="flex flex-wrap gap-2">
-                {TEXT_DECORATIONS.map(dec => <Chip key={dec} label={dec} isSelected={selectedDecoration === dec} onClick={() => setSelectedDecoration(dec)}/>)}
+              <div className="flex flex-wrap gap-2 items-center">
+                {textDecorations.map(dec => <Chip key={dec} label={dec} isSelected={selectedDecoration === dec} onClick={() => setSelectedDecoration(dec)}/>)}
+                <button
+                  onClick={() => handleGenerateMoreSuggestions('decoration')}
+                  disabled={isGeneratingDecorations}
+                  className="p-1.5 bg-slate-700 text-slate-300 rounded-full hover:bg-slate-600 transition-colors disabled:opacity-50 disabled:cursor-wait"
+                  aria-label="Generate more decorations"
+                >
+                  {isGeneratingDecorations ?
+                    <div className="w-4 h-4 border-2 border-slate-400 border-t-transparent rounded-full animate-spin"></div> :
+                    <PlusIcon className="w-4 h-4"/>
+                  }
+                </button>
               </div>
             </div>
           </div>

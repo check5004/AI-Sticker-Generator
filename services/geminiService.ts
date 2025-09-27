@@ -121,6 +121,53 @@ export const generateStickerTexts = async (
     }
 };
 
+export const generateSuggestions = async (
+    type: 'tone' | 'decoration',
+    existingSuggestions: string[],
+    count: number = 5
+): Promise<string[]> => {
+    const typeDescription = type === 'tone' ? '口調・雰囲気' : '文字の装飾';
+    const examples = type === 'tone'
+        ? '例: 「お嬢様風」「武士風」「赤ちゃん言葉」'
+        : '例: 「ネオン」「レトロ」「ゴシック」';
+
+    const prompt = `LINEスタンプ作成で使う、スタンプのテキストの「${typeDescription}」の新しいアイデアを${count}個提案してください。
+    
+以下のリストにあるものは除外してください。
+- ${existingSuggestions.join('\n- ')}
+
+# 条件
+- 独創的で面白いものを提案してください。
+- 10文字以内の短いテキストでお願いします。
+${examples}
+`;
+
+    const response = await ai.models.generateContent({
+        model: "gemini-2.5-flash-lite", // lite付きのモデルはより軽量な最新のモデル
+        contents: prompt,
+        config: {
+            responseMimeType: "application/json",
+            responseSchema: {
+                type: Type.OBJECT,
+                properties: {
+                    suggestions: {
+                        type: Type.ARRAY,
+                        items: { type: Type.STRING }
+                    }
+                }
+            },
+        },
+    });
+
+    try {
+        const json = JSON.parse(response.text);
+        return json.suggestions || [];
+    } catch (e) {
+        console.error("Failed to parse suggestions JSON:", e);
+        return [];
+    }
+};
+
 export const generateStickerImage = async (
     characterImageBase64: string,
     stickerText: string,
