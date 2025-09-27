@@ -1,0 +1,5 @@
+{
+  "name": "AI LINE Sticker Generator",
+  "description": "An application that uses the Gemini API to design original characters from user-uploaded images and generate custom LINE stickers.",
+  "requestFramePermissions": []
+}
