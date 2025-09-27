@@ -10,6 +10,7 @@ import { SparklesIcon, DownloadIcon, UploadIcon, PlusIcon, BugIcon } from './ico
 import { RevisionModal } from './RevisionModal';
 import { DebugModal } from './DebugModal';
 import { useAppSettings } from '../contexts/AppSettingsContext';
+import { ImagePreviewModal } from './ImagePreviewModal';
 
 declare var JSZip: any;
 
@@ -19,7 +20,8 @@ const StickerCard: React.FC<{
     onRevise: (sticker: Sticker) => void;
     onDownload: (sticker: Sticker) => void;
     onDebug: (sticker: Sticker) => void;
-}> = ({ sticker, onTextChange, onRevise, onDownload, onDebug }) => {
+    onPreview: (sticker: Sticker) => void;
+}> = ({ sticker, onTextChange, onRevise, onDownload, onDebug, onPreview }) => {
     const statusClasses: Record<StickerStatus, string> = {
         idle: 'border-slate-600',
         generating_text: 'border-blue-500 animate-pulse',
@@ -41,7 +43,14 @@ const StickerCard: React.FC<{
     return (
         <div className={`relative bg-slate-800 rounded-lg shadow border-2 ${statusClasses[sticker.status]} flex flex-col`}>
             <div className="aspect-square w-full bg-slate-700 rounded-t-lg relative flex items-center justify-center">
-                {sticker.image ? <img src={`data:image/png;base64,${sticker.image}`} className="w-full h-full object-contain"/> : <span className="text-slate-500 text-sm">画像未生成</span>}
+                 <button 
+                    onClick={() => onPreview(sticker)}
+                    disabled={sticker.status !== 'done'}
+                    className="w-full h-full disabled:cursor-not-allowed group"
+                    aria-label={`Preview sticker: ${sticker.text}`}
+                >
+                    {sticker.image ? <img src={`data:image/png;base64,${sticker.image}`} alt={sticker.text} className="w-full h-full object-contain transition-transform group-hover:scale-105"/> : <span className="text-slate-500 text-sm">画像未生成</span>}
+                </button>
                 <StatusIndicator status={sticker.status}/>
             </div>
             <div className="p-2 flex-grow flex flex-col">
@@ -117,6 +126,9 @@ export const StickerCreationTab: React.FC<StickerCreationTabProps> = ({ initialD
 
   const [isDebugModalOpen, setIsDebugModalOpen] = useState(false);
   const [stickerToDebug, setStickerToDebug] = useState<Sticker | null>(null);
+
+  const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
+  const [stickerToPreview, setStickerToPreview] = useState<Sticker | null>(null);
 
 
   useEffect(() => {
@@ -309,6 +321,18 @@ export const StickerCreationTab: React.FC<StickerCreationTabProps> = ({ initialD
     setStickerToDebug(null);
   };
 
+  const handleOpenPreviewModal = (sticker: Sticker) => {
+    if (sticker.status === 'done') {
+        setStickerToPreview(sticker);
+        setIsPreviewModalOpen(true);
+    }
+  };
+
+  const handleClosePreviewModal = () => {
+      setIsPreviewModalOpen(false);
+      setStickerToPreview(null);
+  };
+
   const handleApplyRevision = (stickerId: string, newImage: string, newText: string, newFileName: string) => {
       setStickers(prev => prev.map(s => 
           s.id === stickerId ? { ...s, image: newImage, text: newText, fileName: newFileName, status: 'done' } : s
@@ -450,6 +474,7 @@ export const StickerCreationTab: React.FC<StickerCreationTabProps> = ({ initialD
                     onRevise={handleOpenRevisionModal}
                     onDownload={handleDownloadSingle}
                     onDebug={handleOpenDebugModal}
+                    onPreview={handleOpenPreviewModal}
                   />
               ))}
           </div>
@@ -469,6 +494,13 @@ export const StickerCreationTab: React.FC<StickerCreationTabProps> = ({ initialD
         isOpen={isDebugModalOpen}
         onClose={handleCloseDebugModal}
         sticker={stickerToDebug}
+    />
+    <ImagePreviewModal
+        isOpen={isPreviewModalOpen}
+        onClose={handleClosePreviewModal}
+        sticker={stickerToPreview}
+        onRevise={handleOpenRevisionModal}
+        onDownload={handleDownloadSingle}
     />
     </>
   );
