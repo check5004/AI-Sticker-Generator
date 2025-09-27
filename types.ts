@@ -21,12 +21,18 @@ export interface GenerationResult extends CharacterDesign {
 
 export type StickerStatus = 'idle' | 'generating_text' | 'generating_image' | 'done' | 'error';
 
+export interface StickerGenerationPayload {
+  prompt: string;
+  images: string[]; // [characterImageBase64, textImageBase64]
+}
+
 export interface Sticker {
   id: string;
   text: string;
   image: string; // base64
   fileName: string;
   status: StickerStatus;
+  generationPayload?: StickerGenerationPayload;
 }
 
 export interface TextImageOptions {

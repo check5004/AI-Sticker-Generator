@@ -1,12 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import type { ChangeEvent } from 'react';
-import type { CharacterDesign, Sticker, StickerStatus } from '../types';
+import type { CharacterDesign, Sticker, StickerStatus, StickerGenerationPayload } from '../types';
 import { TONES, TEXT_DECORATIONS } from '../constants';
 import { generateStickerTexts, generateStickerImage, fileToBase64, generateSuggestions } from '../services/geminiService';
+import { aiConfigManager, AITask, renderTemplate } from '../services/aiConfigService';
 import { createTextImage } from '../services/imageUtils';
 import { Chip } from './Chip';
-import { SparklesIcon, DownloadIcon, UploadIcon, PlusIcon } from './icons';
+import { SparklesIcon, DownloadIcon, UploadIcon, PlusIcon, BugIcon } from './icons';
 import { RevisionModal } from './RevisionModal';
+import { DebugModal } from './DebugModal';
 import { useAppSettings } from '../contexts/AppSettingsContext';
 
 declare var JSZip: any;
@@ -16,7 +18,8 @@ const StickerCard: React.FC<{
     onTextChange: (id: string, text: string) => void;
     onRevise: (sticker: Sticker) => void;
     onDownload: (sticker: Sticker) => void;
-}> = ({ sticker, onTextChange, onRevise, onDownload }) => {
+    onDebug: (sticker: Sticker) => void;
+}> = ({ sticker, onTextChange, onRevise, onDownload, onDebug }) => {
     const statusClasses: Record<StickerStatus, string> = {
         idle: 'border-slate-600',
         generating_text: 'border-blue-500 animate-pulse',
@@ -57,14 +60,24 @@ const StickerCard: React.FC<{
                 >
                     AIで修正
                 </button>
-                <button 
-                    disabled={!sticker.image || sticker.status !== 'done'}
-                    onClick={() => onDownload(sticker)}
-                    className="text-indigo-500 disabled:text-slate-500"
-                    aria-label="Download sticker"
-                >
-                    <DownloadIcon className="w-4 h-4"/>
-                </button>
+                <div className="flex items-center gap-1">
+                    <button
+                        onClick={() => onDebug(sticker)}
+                        disabled={!sticker.generationPayload}
+                        className="text-slate-400 disabled:text-slate-600 hover:text-slate-100 transition-colors"
+                        aria-label="Debug info"
+                    >
+                        <BugIcon className="w-4 h-4"/>
+                    </button>
+                    <button 
+                        disabled={!sticker.image || sticker.status !== 'done'}
+                        onClick={() => onDownload(sticker)}
+                        className="text-indigo-500 disabled:text-slate-500"
+                        aria-label="Download sticker"
+                    >
+                        <DownloadIcon className="w-4 h-4"/>
+                    </button>
+                </div>
             </div>
         </div>
     )
@@ -101,6 +114,9 @@ export const StickerCreationTab: React.FC<StickerCreationTabProps> = ({ initialD
   const [isGeneratingDecorations, setIsGeneratingDecorations] = useState(false);
   const [customStickerPrompt, setCustomStickerPrompt] = useState<string>('');
   const { appSettings } = useAppSettings();
+
+  const [isDebugModalOpen, setIsDebugModalOpen] = useState(false);
+  const [stickerToDebug, setStickerToDebug] = useState<Sticker | null>(null);
 
 
   useEffect(() => {
@@ -176,18 +192,30 @@ export const StickerCreationTab: React.FC<StickerCreationTabProps> = ({ initialD
           imageHeight: appSettings.textImageHeight,
       };
 
+      const stickerImageConfig = aiConfigManager.getConfig(AITask.STICKER_IMAGE);
+      const prompt = renderTemplate(stickerImageConfig.prompt, {
+          characterDescription: selectedDesign.characterDescription,
+          customPrompt: customStickerPrompt,
+      });
+
       for (let i = 0; i < processingStickers.length; i += BATCH_SIZE) {
           const batch = processingStickers.slice(i, i + BATCH_SIZE);
           await Promise.all(batch.map(async (sticker) => {
               try {
                   const textImageBase64 = await createTextImage(sticker.text, textImageOptions);
+                  
+                  const payload: StickerGenerationPayload = {
+                    prompt,
+                    images: [selectedDesign.imageBase64, textImageBase64],
+                  };
+
                   const { imageBase64, fileName } = await generateStickerImage(
                     selectedDesign.imageBase64, 
                     textImageBase64,
                     selectedDesign.characterDescription, 
                     customStickerPrompt
                   );
-                  setStickers(prev => prev.map(s => s.id === sticker.id ? { ...s, image: imageBase64, fileName, status: 'done' } : s));
+                  setStickers(prev => prev.map(s => s.id === sticker.id ? { ...s, image: imageBase64, fileName, status: 'done', generationPayload: payload } : s));
               } catch (e) {
                   console.error(`Error generating sticker ${sticker.id}:`, e);
                   setStickers(prev => prev.map(s => s.id === sticker.id ? { ...s, status: 'error' } : s));
@@ -264,6 +292,18 @@ export const StickerCreationTab: React.FC<StickerCreationTabProps> = ({ initialD
   const handleCloseRevisionModal = () => {
       setIsRevisionModalOpen(false);
       setStickerToRevise(null);
+  };
+  
+  const handleOpenDebugModal = (sticker: Sticker) => {
+    if (sticker.generationPayload) {
+      setStickerToDebug(sticker);
+      setIsDebugModalOpen(true);
+    }
+  };
+
+  const handleCloseDebugModal = () => {
+    setIsDebugModalOpen(false);
+    setStickerToDebug(null);
   };
 
   const handleApplyRevision = (stickerId: string, newImage: string, newText: string, newFileName: string) => {
@@ -406,6 +446,7 @@ export const StickerCreationTab: React.FC<StickerCreationTabProps> = ({ initialD
                     onTextChange={handleTextChange}
                     onRevise={handleOpenRevisionModal}
                     onDownload={handleDownloadSingle}
+                    onDebug={handleOpenDebugModal}
                   />
               ))}
           </div>
@@ -421,6 +462,11 @@ export const StickerCreationTab: React.FC<StickerCreationTabProps> = ({ initialD
             onApplyRevision={handleApplyRevision}
         />
     )}
+    <DebugModal 
+        isOpen={isDebugModalOpen}
+        onClose={handleCloseDebugModal}
+        sticker={stickerToDebug}
+    />
     </>
   );
 };
