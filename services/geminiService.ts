@@ -144,7 +144,7 @@ ${examples}
 `;
 
     const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash-lite", // lite付きのモデルはより軽量な最新のモデル
+        model: "gemini-2.5-flash", 
         contents: prompt,
         config: {
             responseMimeType: "application/json",
@@ -171,20 +171,20 @@ ${examples}
 
 export const generateStickerImage = async (
     characterImageBase64: string,
-    stickerText: string,
+    textImageBase64: string,
     characterDescription: string,
     customPrompt: string
 ) => {
     const config = aiConfigManager.getConfig(AITask.STICKER_IMAGE);
     const prompt = renderTemplate(config.prompt, {
         characterDescription,
-        stickerText,
         customPrompt
     });
 
     const contents = {
         parts: [
             { inlineData: { data: characterImageBase64, mimeType: 'image/png' } },
+            { inlineData: { data: textImageBase64, mimeType: 'image/png' } },
             { text: prompt }
         ]
     };

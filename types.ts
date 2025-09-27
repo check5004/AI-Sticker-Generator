@@ -28,3 +28,10 @@ export interface Sticker {
   fileName: string;
   status: StickerStatus;
 }
+
+export interface TextImageOptions {
+  decorationStyle: string;
+  fontSize: number;
+  fontColor: string;
+  imageHeight: number;
+}

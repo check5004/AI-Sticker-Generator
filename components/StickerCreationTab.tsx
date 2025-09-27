@@ -3,6 +3,7 @@ import type { ChangeEvent } from 'react';
 import type { CharacterDesign, Sticker, StickerStatus } from '../types';
 import { TONES, TEXT_DECORATIONS } from '../constants';
 import { generateStickerTexts, generateStickerImage, fileToBase64, generateSuggestions } from '../services/geminiService';
+import { createTextImage } from '../services/imageUtils';
 import { Chip } from './Chip';
 import { SparklesIcon, DownloadIcon, UploadIcon, PlusIcon } from './icons';
 import { RevisionModal } from './RevisionModal';
@@ -165,12 +166,25 @@ export const StickerCreationTab: React.FC<StickerCreationTabProps> = ({ initialD
 
       const BATCH_SIZE = 4;
       let processingStickers = [...stickers];
+      
+      const textImageOptions = {
+          decorationStyle: selectedDecoration,
+          fontSize: 48,
+          fontColor: '#333333',
+          imageHeight: 120,
+      };
 
       for (let i = 0; i < processingStickers.length; i += BATCH_SIZE) {
           const batch = processingStickers.slice(i, i + BATCH_SIZE);
           await Promise.all(batch.map(async (sticker) => {
               try {
-                  const { imageBase64, fileName } = await generateStickerImage(selectedDesign.imageBase64, sticker.text, selectedDesign.characterDescription, customStickerPrompt);
+                  const textImageBase64 = await createTextImage(sticker.text, textImageOptions);
+                  const { imageBase64, fileName } = await generateStickerImage(
+                    selectedDesign.imageBase64, 
+                    textImageBase64,
+                    selectedDesign.characterDescription, 
+                    customStickerPrompt
+                  );
                   setStickers(prev => prev.map(s => s.id === sticker.id ? { ...s, image: imageBase64, fileName, status: 'done' } : s));
               } catch (e) {
                   console.error(`Error generating sticker ${sticker.id}:`, e);
