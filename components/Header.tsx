@@ -25,6 +25,13 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick, activeTab, onTabCha
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="relative flex items-center justify-between h-16">
           <div className="flex items-center gap-2">
+            <button
+              onClick={onMenuClick}
+              className="p-2 text-slate-400 rounded-full hover:bg-slate-700 hover:text-slate-100 transition-colors"
+              aria-label="Open menu"
+            >
+              <MenuIcon className="w-6 h-6" />
+            </button>
             <SparklesIcon className="w-7 h-7 text-indigo-500" />
             <h1 className="text-lg sm:text-xl font-bold text-slate-100 whitespace-nowrap">
               AI Sticker Generator
@@ -36,16 +43,6 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick, activeTab, onTabCha
                   <TabButton label="3面図作成" isActive={activeTab === 'design'} onClick={() => onTabChange('design')} />
                   <TabButton label="スタンプ作成" isActive={activeTab === 'sticker'} onClick={() => onTabChange('sticker')} />
               </div>
-          </div>
-
-          <div className="flex items-center">
-            <button
-              onClick={onMenuClick}
-              className="p-2 text-slate-400 rounded-full hover:bg-slate-700 hover:text-slate-100 transition-colors"
-              aria-label="Open menu"
-            >
-              <MenuIcon className="w-6 h-6" />
-            </button>
           </div>
         </div>
       </div>
