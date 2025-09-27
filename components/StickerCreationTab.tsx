@@ -6,7 +6,7 @@ import { generateStickerTexts, generateStickerImage, fileToBase64, generateSugge
 import { aiConfigManager, AITask, renderTemplate } from '../services/aiConfigService';
 import { createTextImage } from '../services/imageUtils';
 import { Chip } from './Chip';
-import { SparklesIcon, DownloadIcon, UploadIcon, PlusIcon, BugIcon } from './icons';
+import { SparklesIcon, DownloadIcon, UploadIcon, PlusIcon, BugIcon, RefreshIcon } from './icons';
 import { RevisionModal } from './RevisionModal';
 import { DebugModal } from './DebugModal';
 import { useAppSettings } from '../contexts/AppSettingsContext';
@@ -21,7 +21,8 @@ const StickerCard: React.FC<{
     onDownload: (sticker: Sticker) => void;
     onDebug: (sticker: Sticker) => void;
     onPreview: (sticker: Sticker) => void;
-}> = ({ sticker, onTextChange, onRevise, onDownload, onDebug, onPreview }) => {
+    onRegenerate: (sticker: Sticker) => void;
+}> = ({ sticker, onTextChange, onRevise, onDownload, onDebug, onPreview, onRegenerate }) => {
     const statusClasses: Record<StickerStatus, string> = {
         idle: 'border-slate-600',
         generating_text: 'border-blue-500 animate-pulse',
@@ -70,6 +71,14 @@ const StickerCard: React.FC<{
                     AIで修正
                 </button>
                 <div className="flex items-center gap-1">
+                    <button
+                        onClick={() => onRegenerate(sticker)}
+                        disabled={sticker.status === 'generating_image' || sticker.status === 'generating_text'}
+                        className="text-slate-400 disabled:text-slate-600 disabled:cursor-wait hover:text-slate-100 transition-colors"
+                        aria-label="Regenerate sticker"
+                    >
+                        <RefreshIcon className="w-4 h-4"/>
+                    </button>
                     <button
                         onClick={() => onDebug(sticker)}
                         disabled={!sticker.generationPayload}
@@ -188,6 +197,48 @@ export const StickerCreationTab: React.FC<StickerCreationTabProps> = ({ initialD
     }
   };
   
+  const regenerateSingleStickerImage = async (stickerToRegen: Sticker) => {
+    if (!selectedDesign) return;
+
+    setStickers(prev => prev.map(s => s.id === stickerToRegen.id ? { ...s, status: 'generating_image' } : s));
+
+    try {
+        const textImageOptions = {
+            decorationStyle: selectedDecoration,
+            fontSize: 48,
+            fontColor: '#333333',
+            imageHeight: appSettings.textImageHeight,
+        };
+
+        const stickerImageConfig = aiConfigManager.getConfig(AITask.STICKER_IMAGE);
+        
+        const textImageBase64 = await createTextImage(stickerToRegen.text, textImageOptions);
+        
+        const finalPrompt = renderTemplate(stickerImageConfig.prompt, {
+            characterDescription: selectedDesign.characterDescription,
+            customPrompt: customStickerPrompt,
+            decorationStyle: selectedDecoration
+        });
+
+        const payload: StickerGenerationPayload = {
+            prompt: finalPrompt,
+            images: [selectedDesign.imageBase64, textImageBase64],
+        };
+
+        const { imageBase64, fileName } = await generateStickerImage(
+            selectedDesign.imageBase64, 
+            textImageBase64,
+            selectedDesign.characterDescription, 
+            customStickerPrompt,
+            selectedDecoration
+        );
+        setStickers(prev => prev.map(s => s.id === stickerToRegen.id ? { ...s, image: imageBase64, fileName, status: 'done', generationPayload: payload } : s));
+    } catch (e) {
+        console.error(`Error regenerating sticker ${stickerToRegen.id}:`, e);
+        setStickers(prev => prev.map(s => s.id === stickerToRegen.id ? { ...s, status: 'error' } : s));
+    }
+  };
+
   const handleGenerateImages = async () => {
       if (!selectedDesign) return;
       setIsLoading(true);
@@ -232,8 +283,8 @@ export const StickerCreationTab: React.FC<StickerCreationTabProps> = ({ initialD
                   );
                   setStickers(prev => prev.map(s => s.id === sticker.id ? { ...s, image: imageBase64, fileName, status: 'done', generationPayload: payload } : s));
               } catch (e) {
-                  console.error(`Error generating sticker ${sticker.id}:`, e);
-                  setStickers(prev => prev.map(s => s.id === sticker.id ? { ...s, status: 'error' } : s));
+                  console.error(`Error generating sticker ${sticker.id}. Retrying once...`, e);
+                  await regenerateSingleStickerImage(sticker);
               }
           }));
       }
@@ -475,6 +526,7 @@ export const StickerCreationTab: React.FC<StickerCreationTabProps> = ({ initialD
                     onDownload={handleDownloadSingle}
                     onDebug={handleOpenDebugModal}
                     onPreview={handleOpenPreviewModal}
+                    onRegenerate={regenerateSingleStickerImage}
                   />
               ))}
           </div>
