@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { XIcon } from './icons';
 import { useConfig } from '../contexts/ConfigContext';
 import { AITask, AIConfig, AllAIConfigs, DEFAULT_CONFIGS } from '../services/aiConfigService';
+import { useAppSettings } from '../contexts/AppSettingsContext';
+import type { AppSettings } from '../types';
 
 interface SettingsModalProps {
     isOpen: boolean;
@@ -9,24 +11,37 @@ interface SettingsModalProps {
 }
 
 const aiTasks = Object.values(AITask);
+type SettingsTab = AITask | 'general';
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
     const { configs, updateConfig, resetAllConfigs, resetConfig } = useConfig();
+    const { appSettings, updateAppSettings } = useAppSettings();
     const [localConfigs, setLocalConfigs] = useState<AllAIConfigs>(configs);
-    const [activeTab, setActiveTab] = useState<AITask>(aiTasks[0]);
+    const [localAppSettings, setLocalAppSettings] = useState<AppSettings>(appSettings);
+    const [activeTab, setActiveTab] = useState<SettingsTab>(aiTasks[0]);
     const [hasChanges, setHasChanges] = useState(false);
 
     useEffect(() => {
         if (isOpen) {
             setLocalConfigs(configs);
+            setLocalAppSettings(appSettings);
+            setActiveTab(aiTasks[0]);
             setHasChanges(false);
         }
-    }, [isOpen, configs]);
+    }, [isOpen, configs, appSettings]);
 
     const handlePromptChange = (task: AITask, prompt: string) => {
         setLocalConfigs(prev => ({
             ...prev,
             [task]: { ...prev[task], prompt }
+        }));
+        setHasChanges(true);
+    };
+
+    const handleAppSettingsChange = (key: keyof AppSettings, value: any) => {
+        setLocalAppSettings(prev => ({
+            ...prev,
+            [key]: value
         }));
         setHasChanges(true);
     };
@@ -37,21 +52,25 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                 updateConfig(task, localConfigs[task]);
             }
         });
+        if (JSON.stringify(localAppSettings) !== JSON.stringify(appSettings)) {
+            updateAppSettings(localAppSettings);
+        }
         setHasChanges(false);
         onClose();
     };
 
     const handleResetAll = () => {
         resetAllConfigs();
+        // Here we could also reset app settings if we add a function for it.
         setHasChanges(false);
         onClose();
     };
     
     const handleResetCurrent = () => {
+        if (activeTab === 'general') return;
         const taskToReset = activeTab;
         setLocalConfigs(prev => {
             const newConfigs = { ...prev, [taskToReset]: DEFAULT_CONFIGS[taskToReset] };
-            // We need to compare against the original saved config, not the default one.
             if(JSON.stringify(newConfigs[taskToReset]) !== JSON.stringify(configs[taskToReset])){
                 setHasChanges(true);
             }
@@ -61,8 +80,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
 
 
     if (!isOpen) return null;
-    
-    const currentConfig = localConfigs[activeTab];
+
+    const isAITask = (tab: SettingsTab): tab is AITask => aiTasks.includes(tab as AITask);
+    const currentConfig = isAITask(activeTab) ? localConfigs[activeTab] : null;
 
     return (
         <div 
@@ -72,11 +92,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
             aria-modal="true"
         >
             <div 
-                className="bg-slate-800 rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col" 
+                className="bg-slate-800 rounded-xl shadow-2xl w-full max-w-4xl h-[80vh] flex flex-col" 
                 onClick={e => e.stopPropagation()}
             >
                 <div className="flex items-center justify-between p-4 border-b border-slate-700 flex-shrink-0">
-                    <h2 className="text-xl font-bold text-slate-100">AI設定</h2>
+                    <h2 className="text-xl font-bold text-slate-100">設定</h2>
                     <button 
                         onClick={onClose} 
                         className="p-1 text-slate-400 hover:text-slate-100 rounded-full hover:bg-slate-700" 
@@ -89,6 +109,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                 <div className="flex-grow flex flex-col md:flex-row min-h-0">
                     <div className="w-full md:w-1/4 border-b md:border-b-0 md:border-r border-slate-700 flex-shrink-0 p-2 overflow-y-auto">
                         <nav className="flex flex-row md:flex-col gap-1">
+                             <h4 className="px-3 pt-2 pb-1 text-xs font-semibold text-slate-400 uppercase tracking-wider">AI Prompts</h4>
                             {aiTasks.map(task => (
                                 <button
                                     key={task}
@@ -100,31 +121,67 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                                     {configs[task].name}
                                 </button>
                             ))}
+                            <h4 className="px-3 pt-4 pb-1 text-xs font-semibold text-slate-400 uppercase tracking-wider">Application</h4>
+                             <button
+                                key="general"
+                                onClick={() => setActiveTab('general')}
+                                className={`w-full text-left px-3 py-2 text-sm rounded-md transition-colors ${
+                                    activeTab === 'general' ? 'bg-indigo-600 text-white' : 'text-slate-300 hover:bg-slate-700'
+                                }`}
+                            >
+                                一般設定
+                            </button>
                         </nav>
                     </div>
 
                     <div className="flex-grow p-4 md:p-6 overflow-y-auto flex flex-col">
-                        <div className="flex-grow flex flex-col">
-                            <h3 className="text-lg font-bold text-slate-100">{currentConfig.name}</h3>
-                            <p className="text-sm text-slate-400 mt-1 mb-4">{currentConfig.description}</p>
-                            
-                             <div className="mb-2 flex items-center justify-between">
-                                <label htmlFor="prompt-textarea" className="font-semibold text-slate-300">
-                                    システムプロンプト
-                                </label>
-                                <button onClick={handleResetCurrent} className="text-xs text-indigo-400 hover:underline">
-                                    このプロンプトをデフォルトに戻す
-                                </button>
+                        {currentConfig ? (
+                            <div className="flex-grow flex flex-col">
+                                <h3 className="text-lg font-bold text-slate-100">{currentConfig.name}</h3>
+                                <p className="text-sm text-slate-400 mt-1 mb-4">{currentConfig.description}</p>
+                                
+                                 <div className="mb-2 flex items-center justify-between">
+                                    <label htmlFor="prompt-textarea" className="font-semibold text-slate-300">
+                                        システムプロンプト
+                                    </label>
+                                    <button onClick={handleResetCurrent} className="text-xs text-indigo-400 hover:underline">
+                                        このプロンプトをデフォルトに戻す
+                                    </button>
+                                </div>
+                                
+                                <textarea
+                                    id="prompt-textarea"
+                                    value={currentConfig.prompt}
+                                    onChange={(e) => handlePromptChange(activeTab as AITask, e.target.value)}
+                                    className="w-full flex-grow p-3 bg-slate-900 border border-slate-600 rounded-md text-slate-200 font-mono text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 min-h-[200px]"
+                                    placeholder="AIへの指示を入力..."
+                                />
                             </div>
-                            
-                            <textarea
-                                id="prompt-textarea"
-                                value={currentConfig.prompt}
-                                onChange={(e) => handlePromptChange(activeTab, e.target.value)}
-                                className="w-full flex-grow p-3 bg-slate-900 border border-slate-600 rounded-md text-slate-200 font-mono text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 min-h-[200px]"
-                                placeholder="AIへの指示を入力..."
-                            />
-                        </div>
+                        ) : (
+                            <div>
+                                <h3 className="text-lg font-bold text-slate-100">一般設定</h3>
+                                <p className="text-sm text-slate-400 mt-1 mb-4">アプリケーション全体の設定です。</p>
+                                <div className="mt-4 border-t border-slate-700 pt-4 space-y-4">
+                                    <div>
+                                        <label htmlFor="text-image-height" className="font-semibold text-slate-300 mb-2 block">
+                                            テキスト画像の高さ (px)
+                                        </label>
+                                        <input
+                                            id="text-image-height"
+                                            type="number"
+                                            min="10"
+                                            value={localAppSettings.textImageHeight}
+                                            onChange={(e) => handleAppSettingsChange('textImageHeight', parseInt(e.target.value, 10) || 10)}
+                                            className="w-full max-w-xs p-2 bg-slate-700 border border-slate-600 rounded-md text-slate-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                                            placeholder="例: 120"
+                                        />
+                                        <p className="text-xs text-slate-400 mt-1">
+                                            スタンプ画像生成時に使用されるテキスト画像の高さをピクセル単位で指定します。
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
 

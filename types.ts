@@ -35,3 +35,7 @@ export interface TextImageOptions {
   fontColor: string;
   imageHeight: number;
 }
+
+export interface AppSettings {
+  textImageHeight: number;
+}

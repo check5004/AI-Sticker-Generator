@@ -17,3 +17,4 @@ export const REVISE_SUGGESTIONS = {
 
 export const LOCAL_STORAGE_KEY = 'lineStampApp_charDesigns';
 export const LOCAL_STORAGE_CONFIG_KEY = 'lineStampApp_aiConfigs';
+export const LOCAL_STORAGE_APP_SETTINGS_KEY = 'lineStampApp_appSettings';

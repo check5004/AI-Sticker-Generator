@@ -8,6 +8,7 @@ import { useLocalStorage } from './hooks/useLocalStorage';
 import { LOCAL_STORAGE_KEY } from './constants';
 import type { CharacterDesign } from './types';
 import { ConfigProvider } from './contexts/ConfigContext';
+import { AppSettingsProvider } from './contexts/AppSettingsContext';
 
 type Tab = 'design' | 'sticker';
 
@@ -51,44 +52,46 @@ function App() {
 
   return (
     <ConfigProvider>
-      <div className="min-h-screen flex flex-col bg-slate-900">
-        <Header 
-          onMenuClick={() => setIsSidebarOpen(true)}
-          activeTab={activeTab}
-          onTabChange={setActiveTab}
-        />
-        <Sidebar 
-          isOpen={isSidebarOpen} 
-          onClose={() => setIsSidebarOpen(false)} 
-          characterDesigns={characterDesigns}
-          onSelectDesign={handleSelectDesignFromHistory}
-          onNewDesign={handleNewDesign}
-          onOpenSettings={handleOpenSettings}
-        />
-        <SettingsModal 
-          isOpen={isSettingsModalOpen}
-          onClose={() => setIsSettingsModalOpen(false)}
-        />
-        
-        <main className="flex-grow container mx-auto p-4 sm:p-6 lg:p-8 flex flex-col min-h-0">
-          <div className="flex-grow min-h-0">
-              <div className={activeTab === 'design' ? 'block h-full' : 'hidden'}>
-                <CharacterDesignTab 
-                  onDesignGenerated={handleDesignGenerated} 
-                  onSwitchToStickerTab={handleSwitchToStickerTab}
-                />
-              </div>
-              <div className={activeTab === 'sticker' ? 'block h-full' : 'hidden'}>
-                  <StickerCreationTab
-                      initialDesign={initialStickerDesign}
-                      characterDesigns={characterDesigns}
-                      onSelectDesignFromHistory={handleSelectDesignFromHistory}
-                      onSwitchToDesignTab={() => setActiveTab('design')}
+      <AppSettingsProvider>
+        <div className="min-h-screen flex flex-col bg-slate-900">
+          <Header 
+            onMenuClick={() => setIsSidebarOpen(true)}
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
+          />
+          <Sidebar 
+            isOpen={isSidebarOpen} 
+            onClose={() => setIsSidebarOpen(false)} 
+            characterDesigns={characterDesigns}
+            onSelectDesign={handleSelectDesignFromHistory}
+            onNewDesign={handleNewDesign}
+            onOpenSettings={handleOpenSettings}
+          />
+          <SettingsModal 
+            isOpen={isSettingsModalOpen}
+            onClose={() => setIsSettingsModalOpen(false)}
+          />
+          
+          <main className="flex-grow container mx-auto p-4 sm:p-6 lg:p-8 flex flex-col min-h-0">
+            <div className="flex-grow min-h-0">
+                <div className={activeTab === 'design' ? 'block h-full' : 'hidden'}>
+                  <CharacterDesignTab 
+                    onDesignGenerated={handleDesignGenerated} 
+                    onSwitchToStickerTab={handleSwitchToStickerTab}
                   />
-              </div>
-          </div>
-        </main>
-      </div>
+                </div>
+                <div className={activeTab === 'sticker' ? 'block h-full' : 'hidden'}>
+                    <StickerCreationTab
+                        initialDesign={initialStickerDesign}
+                        characterDesigns={characterDesigns}
+                        onSelectDesignFromHistory={handleSelectDesignFromHistory}
+                        onSwitchToDesignTab={() => setActiveTab('design')}
+                    />
+                </div>
+            </div>
+          </main>
+        </div>
+      </AppSettingsProvider>
     </ConfigProvider>
   );
 }

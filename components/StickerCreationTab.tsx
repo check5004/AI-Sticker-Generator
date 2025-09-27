@@ -7,6 +7,7 @@ import { createTextImage } from '../services/imageUtils';
 import { Chip } from './Chip';
 import { SparklesIcon, DownloadIcon, UploadIcon, PlusIcon } from './icons';
 import { RevisionModal } from './RevisionModal';
+import { useAppSettings } from '../contexts/AppSettingsContext';
 
 declare var JSZip: any;
 
@@ -99,6 +100,7 @@ export const StickerCreationTab: React.FC<StickerCreationTabProps> = ({ initialD
   const [isGeneratingTones, setIsGeneratingTones] = useState(false);
   const [isGeneratingDecorations, setIsGeneratingDecorations] = useState(false);
   const [customStickerPrompt, setCustomStickerPrompt] = useState<string>('');
+  const { appSettings } = useAppSettings();
 
 
   useEffect(() => {
@@ -171,7 +173,7 @@ export const StickerCreationTab: React.FC<StickerCreationTabProps> = ({ initialD
           decorationStyle: selectedDecoration,
           fontSize: 48,
           fontColor: '#333333',
-          imageHeight: 120,
+          imageHeight: appSettings.textImageHeight,
       };
 
       for (let i = 0; i < processingStickers.length; i += BATCH_SIZE) {
