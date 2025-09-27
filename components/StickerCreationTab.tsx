@@ -266,9 +266,25 @@ export const StickerCreationTab: React.FC<StickerCreationTabProps> = ({ initialD
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <div>
               <label className="font-semibold text-slate-300 mb-2 block text-sm">スタンプ個数</label>
-              <select value={stickerCount} onChange={(e) => setStickerCount(Number(e.target.value))} className="w-full p-2 bg-slate-700 border border-slate-600 rounded-md text-sm text-slate-200">
-                {[8, 16, 24].map(n => <option key={n} value={n}>{n}個</option>)}
-              </select>
+              <div className="flex items-center justify-between p-1 bg-slate-700 border border-slate-600 rounded-md text-sm text-slate-200">
+                <button
+                    onClick={() => setStickerCount(prev => Math.max(4, prev - 4))}
+                    disabled={stickerCount <= 4}
+                    className="px-4 py-1 font-bold bg-slate-800 rounded hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    aria-label="Decrement sticker count"
+                >
+                    -
+                </button>
+                <span className="font-semibold">{stickerCount}個</span>
+                <button
+                    onClick={() => setStickerCount(prev => Math.min(48, prev + 4))}
+                    disabled={stickerCount >= 48}
+                    className="px-4 py-1 font-bold bg-slate-800 rounded hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    aria-label="Increment sticker count"
+                >
+                    +
+                </button>
+              </div>
             </div>
              <div>
               <label className="font-semibold text-slate-300 mb-2 block text-sm">口調・雰囲気</label>
