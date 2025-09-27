@@ -1,84 +1,72 @@
-# AI設定システムのアーキテクチャ
+# アプリケーション設定システムのアーキテクチャ
 
 ## 1. 目的
 
-このアーキテクチャの主な目的は、アプリケーション内のすべてのAI関連プロンプトとパラメータを、一元的、拡張可能、かつユーザーがカスタマイズ可能なシステムで管理することです。以前はプロンプトがサービス関数内に直接ハードコードされており、管理が難しく、ユーザーによる変更は不可能でした。
+このアーキテクチャの主な目的は、アプリケーション内のすべてのAI関連プロンプトと、それ以外の一般設定（UIの挙動など）を、一元的、拡張可能、かつユーザーがカスタマイズ可能なシステムで管理することです。
 
-この新しいシステムは以下を実現します：
-- **一元管理**: すべてのデフォルトAIプロンプトを単一のファイルに集約。
-- **カスタマイズ性**: ユーザーは新しい設定パネルを通じてデフォルトのプロンプトを上書き可能。
-- **永続性**: ユーザーによるカスタマイズはブラウザのローカルストレージに保存され、セッションをまたいで設定が維持される。
-- **拡張性**: 将来的に新しいAIタスクを追加する際に、最小限のコード変更で済むように設計されている。
-- **関心の分離**: AIロジック（`geminiService.ts`内）が、送信するプロンプトの具体的な内容から分離された。
+このシステムは以下を実現します：
+- **一元管理**: すべてのデフォルト設定（AIプロンプトと一般設定）をコード内で集約。
+- **カスタマイズ性**: ユーザーは設定モーダルを通じてデフォルト設定を上書き可能。
+- **永続性**: ユーザーによるカスタマイズはブラウザの`localStorage`に保存され、セッションをまたいで設定が維持される。
+- **拡張性**: 将来的に新しいAIタスクや一般設定を追加する際に、最小限のコード変更で済むように設計されている。
+- **関心の分離**: AIロジック（`geminiService.ts`内）やUIコンポーネントが、具体的な設定値から分離された。
 
 ## 2. 主要コンポーネント
 
-このシステムは、設定データを管理するサービス、そのデータをUIに提供するReact Context、そしてUIコンポーネント自体の3つの主要な柱で構築されています。
+このシステムは、設定データの種類に応じて責務が分離された2つのReact Contextと、それらを管理するUIコンポーネントで構成されています。
 
-### 2.1. `services/aiConfigService.ts`
+### 2.1. AI設定 (`services/aiConfigService.ts` & `contexts/ConfigContext.tsx`)
 
-設定システムの心臓部です。AI設定の読み込み、管理、保存に関するすべてのロジックを担当するシングルトンサービスです。
+AIに送信するプロンプトやパラメータを専門に扱います。
 
-- **`AITask` (Enum)**: AIの操作（例: `CHARACTER_DESIGN`, `STICKER_TEXT`）を型安全に識別する方法を提供します。これにより、単純な文字列を使用することによるエラーを防ぎます。
+- **`services/aiConfigService.ts`**:
+    - **`AITask` (Enum)**: AIの操作（例: `CHARACTER_DESIGN`, `STICKER_TEXT`）を型安全に識別します。
+    - **`DEFAULT_CONFIGS` (定数)**: すべての`AITask`に対するデフォルトのプロンプトを格納する信頼できる唯一の情報源（Single Source of Truth）です。
+    - **`AIConfigManager` (クラス)**: 設定の状態を管理するシングルトンクラス。`localStorage`との読み書きを抽象化し、デフォルト設定とカスタム設定をマージして常に有効な設定を提供します。
+    - **`renderTemplate(...)`**: プロンプトテンプレート内のプレースホルダー（例: `{{variable}}`）を実際の値に置き換えるユーティリティ関数です。
 
-- **`DEFAULT_CONFIGS` (定数)**: すべての`AITask`に対するデフォルトのプロンプトと設定を格納する包括的なオブジェクトです。これは、アプリケーションの基本的なAIの振る舞いに関する信頼できる唯一の情報源（Single Source of Truth）として機能します。
+- **`contexts/ConfigContext.tsx`**:
+    - **`ConfigProvider`**: `aiConfigManager`から初期ロードされた設定状態を保持し、アプリケーション全体に提供します。
+    - **`useConfig()`**: コンポーネントが現在のAI設定とそれを更新する関数にアクセスするためのカスタムフックです。
 
-- **`AIConfigManager` (クラス)**: 設定の状態を管理するシングルトンクラスです。
-    - **`constructor()`**: インスタンス化されると、直ちに`localStorage`からカスタム設定を読み込みます。
-    - **`getConfig(task)`**: 特定のタスクの設定を取得するための主要なメソッドです。`DEFAULT_CONFIGS`とユーザーが保存したカスタム設定をインテリジェントにマージし、常に完全で有効な設定が返されるようにします。
-    - **`updateConfig(task, newConfig)`**: 特定のタスクのカスタム設定を更新し、すべてのカスタム設定を`localStorage`に保存します。
-    - **`resetConfig(task)`**: 特定のタスクのユーザーカスタマイズを状態と`localStorage`から削除し、デフォルト設定に戻します。
-    - **`resetAll()`**: すべてのユーザーカスタマイズをクリアし、アプリケーションをデフォルトのプロンプトに完全に戻します。
+### 2.2. 一般アプリケーション設定 (`contexts/AppSettingsContext.tsx`)
 
-- **`renderTemplate(template, context)`**: プロンプトテンプレート文字列内のプレースホルダー（例: `{{variable}}`）を実際の値に置き換えるシンプルなユーティリティ関数です。
+AIプロンプト以外の、アプリケーション全体の挙動に関わる設定を扱います。
 
-### 2.2. `contexts/ConfigContext.tsx`
+- **`types.ts` (`AppSettings` interface)**: 管理対象となる一般設定の型を定義します（例: `textImageHeight: number`）。
+- **`contexts/AppSettingsContext.tsx`**:
+    - **`DEFAULT_APP_SETTINGS` (定数)**: 一般設定のデフォルト値を定義します。
+    - **`AppSettingsProvider`**: `useLocalStorage`フックを利用して、設定状態を`localStorage`と同期させつつ、アプリケーション全体に提供します。
+    - **`useAppSettings()`**: コンポーネントが現在の一般設定とそれを更新する関数にアクセスするためのカスタムフックです。
 
-AI設定をReactコンポーネントツリー全体で利用可能にし、設定が変更されたときにコンポーネントが再レンダリングされるようにするために、React Contextを使用します。
+### 2.3. 設定UI (`components/SettingsModal.tsx`)
 
-- **`ConfigProvider`**: メインの`App`コンポーネントをラップします。`aiConfigManager`から初期ロードされた設定状態を保持し、その状態を更新またはリセットする関数と共に、すべての子コンポーネントに提供します。
-- **`useConfig()`**: `ConfigProvider`内の任意のコンポーネントが現在の設定とそれを変更する関数に簡単かつクリーンにアクセスするためのカスタムフックです。
+ユーザーがAI設定と一般設定の両方を閲覧・編集するための統一されたインターフェースです。
+
+- タブを使用して、「AI Prompts」と「一般設定」を切り替えられるようになっています。
+- 各設定項目に対応するUI（テキストエリアや数値入力）を提供します。
+- `useConfig`と`useAppSettings`の両方のフックを使い、現在の設定値を表示し、ユーザーによる変更を各Contextに保存します。
 
 ## 3. データフロー
 
-設定データの流れは、単一方向で追跡しやすいように設計されています。
+1.  **初期化**: アプリケーションのルート (`App.tsx`) で `ConfigProvider` と `AppSettingsProvider` がマウントされます。それぞれが `localStorage` からユーザーのカスタム設定を読み込み、状態を初期化します。
+2.  **UI表示**: `SettingsModal`コンポーネントは `useConfig()` と `useAppSettings()` を呼び出して現在の設定を取得し、ユーザーが編集できるように表示します。他のコンポーネント（例: `StickerCreationTab`）も同様にフックを使って設定値を読み取ります。
+3.  **ユーザーによるカスタマイズ**: ユーザーが`SettingsModal`で変更を保存すると、コンポーネントは対応するContextの更新関数（`updateConfig` or `updateAppSettings`）を呼び出します。
+4.  **状態の更新と永続化**: 各Contextは自身の状態を更新します。この状態変更が、Contextを利用しているコンポーネントの再レンダリングを引き起こします。同時に、`useLocalStorage`フックや`AIConfigManager`の内部ロジックにより、変更は自動的に`localStorage`に書き込まれます。
+5.  **設定の利用**: AI操作がトリガーされると、`geminiService.ts`は`aiConfigManager.getConfig()`を呼び出して最新のプロンプトを取得します。UIコンポーネント（例: `imageUtils.ts`の`createTextImage`）は`useAppSettings()`で取得した値（例: `textImageHeight`）を使用して動作します。
 
-1.  **初期化**: `ConfigProvider`がマウントされ、`aiConfigManager.getAllConfigs()`を呼び出してその状態を初期化します。
-2.  **UI表示**: `SettingsModal`コンポーネントが`useConfig()`フックを呼び出して現在の設定を取得し、ユーザーが編集できるようにテキストエリアに表示します。
-3.  **ユーザーによるカスタマイズ**: ユーザーが`SettingsModal`で変更を保存すると、コンポーネントは`useConfig()`フックから取得した`updateConfig`関数を呼び出します。
-4.  **状態の更新**: `ConfigProvider`内の`updateConfig`関数は、内部的に`aiConfigManager.updateConfig()`メソッドを呼び出して変更を`localStorage`に永続化し、その後、自身の状態を新しい完全な設定セットで更新します。この状態変更が、Contextを利用しているコンポーネントの再レンダリングを引き起こします。
-5.  **API呼び出し**: AI操作がトリガーされると（例: スタンプ生成時）、`geminiService.ts`内の関連する関数が直接`aiConfigManager.getConfig()`を呼び出します。これにより、API呼び出しの瞬間に常に最新のプロンプト（デフォルトまたはカスタム）が取得されることが保証されます。
+## 4. 拡張方法
 
-## 4. 新しいAIタスクの追加方法
+### 4.1. 新しいAIタスクの追加方法
 
-AIを活用した新機能でシステムを拡張するプロセスは簡単です。
+1.  **タスクの定義**: `aiConfigService.ts`の`AITask` enumに新しいキーを追加します。
+2.  **デフォルト設定の追加**: `DEFAULT_CONFIGS`オブジェクトに新しいタスクのエントリを追加します。
+3.  **サービス関数の実装**: `geminiService.ts`に新しいAPI呼び出し関数を作成し、`aiConfigManager.getConfig(AITask.NEW_TASK)`で設定を取得します。
+4.  **UI**: `SettingsModal`は`AITask` enumから自動的に新しい設定項目をリストに表示します。
 
-1.  **タスクの定義**: `services/aiConfigService.ts`の`AITask` enumに新しいキーを追加します。
-    ```typescript
-    export enum AITask {
-      // ... 既存のタスク
-      NEW_FEATURE = 'newFeature',
-    }
-    ```
-2.  **デフォルト設定の追加**: `DEFAULT_CONFIGS`オブジェクトに新しいタスクのエントリを追加し、その名前、説明、デフォルトプロンプトを定義します。
-    ```typescript
-    export const DEFAULT_CONFIGS: AllAIConfigs = {
-      // ... 既存の設定
-      [AITask.NEW_FEATURE]: {
-        name: "新しいAI機能",
-        description: "この機能の説明です。",
-        prompt: `これが新しいAIへの指示です。{{some_variable}} を使えます。`,
-      },
-    };
-    ```
-3.  **設定UIの更新**: `SettingsModal`は`AITask` enumに基づいて新しいタスクを自動的に検出して表示するように設計されているため、UIの変更は不要です。
-4.  **サービス関数の実装**: `geminiService.ts`に新しいAPI呼び出し関数を作成します。その中で、既存の関数と同様に設定を取得し、プロンプトをレンダリングします。
-    ```typescript
-    import { aiConfigManager, AITask, renderTemplate } from './aiConfigService';
+### 4.2. 新しい一般設定の追加方法
 
-    export const generateNewFeature = async (some_variable: string) => {
-        const config = aiConfigManager.getConfig(AITask.NEW_FEATURE);
-        const prompt = renderTemplate(config.prompt, { some_variable });
-        // ... promptを使用してGemini API呼び出しを続行
-    };
-    ```
+1.  **型の定義**: `types.ts`の`AppSettings` interfaceに新しいプロパティを追加します。
+2.  **デフォルト値の追加**: `AppSettingsContext.tsx`の`DEFAULT_APP_SETTINGS`にデフォルト値を追加します。
+3.  **UIの実装**: `SettingsModal.tsx`の「一般設定」タブ内に、新しい設定を編集するためのUIコントロール（入力フィールドなど）を追加し、`useAppSettings`フックを使って状態と接続します。
+4.  **設定の利用**: アプリケーション内の任意の場所で`useAppSettings()`フックを呼び出し、新しい設定値を取得して利用します。
