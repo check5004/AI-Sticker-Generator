@@ -1,6 +1,7 @@
 import { GoogleGenAI, Modality, Type } from "@google/genai";
 import type { GenerateContentResponse } from "@google/genai";
 import type { CharacterDesignSettings } from '../types';
+import { aiConfigManager, AITask, renderTemplate } from './aiConfigService';
 
 declare var process: {
   env: {
@@ -58,23 +59,12 @@ export const generateCharacterDesign = async (images: File[], settings: Characte
       },
     };
   }));
-
-  const prompt = `
-# 指示
-アップロードされた画像を参考に、以下の設定でオリジナルのキャラクターをデザインし、キャラクター設定と、正面・横・後ろ姿がわかる3面図を生成してください。
-
-## キャラクター設定
-- カテゴリ: ${settings.categories.join(', ')}
-- 詳細: ${settings.customPrompt}
-
-## 出力形式
-1.  **キャラクター設定**: デザインしたキャラクターの性格や特徴を200文字程度で記述してください。
-2.  **3面図**: 生成したキャラクター設定に基づき、1枚の画像に正面、横、後ろ姿を並べた3面図を描画してください。背景は白にしてください。
-
-最後に、この3面図画像に適した英数字のファイル名を提案してください。例: \`character_A_3view.png\`
-
-# ファイル名
-`;
+  
+  const config = aiConfigManager.getConfig(AITask.CHARACTER_DESIGN);
+  const prompt = renderTemplate(config.prompt, {
+      categories: settings.categories.join(', '),
+      customPrompt: settings.customPrompt
+  });
 
   const contents = {
     parts: [...imageParts, { text: prompt }],
@@ -97,18 +87,13 @@ export const generateStickerTexts = async (
     count: number,
     settings: { tone: string, decoration: string }
 ): Promise<string[]> => {
-    
-    const prompt = `
-    以下のキャラクター設定に基づき、LINEスタンプで使えるセリフを${count}個提案してください。
-    
-    # キャラクター設定
-    ${characterDescription}
-
-    # セリフの条件
-    - 口調・雰囲気: ${settings.tone}
-    - 文字の装飾: ${settings.decoration}
-    - 15文字以内の短いテキスト
-    `;
+    const config = aiConfigManager.getConfig(AITask.STICKER_TEXT);
+    const prompt = renderTemplate(config.prompt, {
+        count,
+        characterDescription,
+        tone: settings.tone,
+        decoration: settings.decoration
+    });
 
     const response = await ai.models.generateContent({
         model: "gemini-2.5-flash",
@@ -141,26 +126,11 @@ export const generateStickerImage = async (
     stickerText: string,
     characterDescription: string
 ) => {
-    const prompt = `
-# 指示
-提供されたキャラクターの3面図とキャラクター設定を参考に、以下のテキストが入ったLINEスタンプを1枚生成してください。
-
-## キャラクター設定
-${characterDescription}
-
-## スタンプのテキスト
-「${stickerText}」
-
-## 作成のポイント
-- キャラクターは3面図のデザインを忠実に再現してください。
-- テキストの内容に合った表情やポーズにしてください。
-- LINEスタンプとして使いやすいように、キャラクターは大きく、背景は透過または白にしてください。
-- テキストは日本語として正しく、読みやすく描画してください。
-
-最後に、このスタンプ画像に適した英数字のファイル名を提案してください。例: \`stamp_01_thankyou.png\`
-
-# ファイル名
-`;
+    const config = aiConfigManager.getConfig(AITask.STICKER_IMAGE);
+    const prompt = renderTemplate(config.prompt, {
+        characterDescription,
+        stickerText
+    });
 
     const contents = {
         parts: [
@@ -217,36 +187,12 @@ export const reviseStickerImage = async (
     characterDescription: string,
     revisionPrompt: string
 ) => {
-    const prompt = `
-# 指示
-提供されたキャラクター、スタンプ画像、テキストを参考に、以下の修正指示に基づいてLINEスタンプを1枚再生成してください。
-
-## キャラクター設定
-${characterDescription}
-
-## 元のスタンプテキスト
-「${originalText}」
-
-## 修正指示
-「${revisionPrompt}」
-
-## 作成のポイント
-- キャラクターは3面図のデザインを忠実に再現してください。
-- 修正指示とテキストの内容に合った表情やポーズにしてください。
-- LINEスタンプとして使いやすいように、キャラクターは大きく、背景は透過または白にしてください。
-- テキストは日本語として正しく、読みやすく描画してください。
-- もし修正指示にテキストの変更が含まれる場合、修正後のテキストも応答に含めてください。そうでなければ元のテキストをそのまま返してください。
-
-最後に、このスタンプ画像に適した英数字のファイル名を提案してください。例: \`stamp_01_thankyou_rev1.png\`
-
-応答は以下のフォーマットで厳密に返してください。
-
-# 修正後のテキスト
-(ここに修正後のテキストを記述)
-
-# ファイル名
-(ここにファイル名を記述)
-`;
+    const config = aiConfigManager.getConfig(AITask.REVISE_STICKER);
+    const prompt = renderTemplate(config.prompt, {
+        characterDescription,
+        originalText,
+        revisionPrompt
+    });
 
     const contents = {
         parts: [

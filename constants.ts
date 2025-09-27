@@ -1,4 +1,3 @@
-
 export const CATEGORIES = [
   'アニメ風', 'ちびキャラ', '手書き風', 'ドット絵', '水彩画', 'ぬいぐるみ風', '油絵風', '厚塗り'
 ];
@@ -17,3 +16,4 @@ export const REVISE_SUGGESTIONS = {
 };
 
 export const LOCAL_STORAGE_KEY = 'lineStampApp_charDesigns';
+export const LOCAL_STORAGE_CONFIG_KEY = 'lineStampApp_aiConfigs';
