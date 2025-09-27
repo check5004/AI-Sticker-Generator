@@ -173,12 +173,14 @@ export const generateStickerImage = async (
     characterImageBase64: string,
     textImageBase64: string,
     characterDescription: string,
-    customPrompt: string
+    customPrompt: string,
+    decorationStyle: string
 ) => {
     const config = aiConfigManager.getConfig(AITask.STICKER_IMAGE);
     const prompt = renderTemplate(config.prompt, {
         characterDescription,
-        customPrompt
+        customPrompt,
+        decorationStyle
     });
 
     const contents = {

@@ -4,7 +4,7 @@ import { LOCAL_STORAGE_APP_SETTINGS_KEY } from '../constants';
 import type { AppSettings } from '../types';
 
 const DEFAULT_APP_SETTINGS: AppSettings = {
-    textImageHeight: 120,
+    textImageHeight: 10,
 };
 
 interface AppSettingsContextType {

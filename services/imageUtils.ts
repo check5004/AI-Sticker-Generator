@@ -9,37 +9,10 @@ interface Style {
 
 const mapDecorationToStyle = (decoration: string): Style => {
     let style: Style = {
-        fontFamily: '"ヒラギノ角ゴ Pro W3", "Hiragino Kaku Gothic Pro", "メイリオ", Meiryo, Osaka, "ＭＳ Ｐゴシック", "MS PGothic", sans-serif',
+        fontFamily: '"ＭＳ Ｐゴシック", "MS PGothic", "ヒラギノ角ゴ Pro W3", "Hiragino Kaku Gothic Pro", "メイリオ", Meiryo, Osaka, sans-serif',
         fontWeight: 'bold',
     };
 
-    switch (decoration) {
-        case '太字':
-            style.fontWeight = '900';
-            break;
-        case 'ゴシック':
-            // Default is already gothic-like sans-serif
-            break;
-        case '筆文字':
-        case '手書き風':
-            style.fontFamily = '"Yu Mincho", "YuMincho", "ヒラギノ明朝 ProN W3", "Hiragino Mincho ProN", "HG明朝E", "ＭＳ Ｐ明朝", "ＭＳ 明朝", serif';
-            break;
-        case 'ポップ':
-            style.fontFamily = '"Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif';
-            style.fontWeight = 'bold';
-            style.shadow = { color: 'rgba(0, 0, 0, 0.4)', offsetX: 2, offsetY: 2, blur: 4 };
-            break;
-        case 'レトロ':
-            style.fontFamily = 'serif';
-            break;
-        case 'ネオン':
-            style.glow = { blur: 10 };
-            break;
-        default:
-            // For 'キラキラ', 'ふきだし', 'ドット', etc., we use a clean default.
-            // The AI will add the special effects on top of this generated text image.
-            break;
-    }
     return style;
 };
 
@@ -74,12 +47,9 @@ export const createTextImage = async (text: string, options: TextImageOptions): 
       }
   });
 
-  // Set canvas dimensions
+  // Set canvas dimensions to be a square based on text width
   const canvasWidth = maxWidth + padding * 2;
-  const lineHeight = fontSize * 1.2;
-  const totalTextHeight = lineHeight * lines.length;
-  // Ensure canvas height is at least the desired height, but expand if text is too tall
-  const canvasHeight = Math.max(imageHeight, totalTextHeight + padding * 2);
+  const canvasHeight = canvasWidth; // Make canvas square
 
   canvas.width = canvasWidth;
   canvas.height = canvasHeight;
@@ -103,6 +73,7 @@ export const createTextImage = async (text: string, options: TextImageOptions): 
   }
 
   // Draw each line of text
+  const lineHeight = fontSize * 1.2;
   const startY = (canvasHeight / 2) - (lineHeight * (lines.length - 1) / 2);
   lines.forEach((line, index) => {
       ctx.fillText(line, canvasWidth / 2, startY + (index * lineHeight));

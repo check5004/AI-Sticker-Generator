@@ -193,10 +193,6 @@ export const StickerCreationTab: React.FC<StickerCreationTabProps> = ({ initialD
       };
 
       const stickerImageConfig = aiConfigManager.getConfig(AITask.STICKER_IMAGE);
-      const prompt = renderTemplate(stickerImageConfig.prompt, {
-          characterDescription: selectedDesign.characterDescription,
-          customPrompt: customStickerPrompt,
-      });
 
       for (let i = 0; i < processingStickers.length; i += BATCH_SIZE) {
           const batch = processingStickers.slice(i, i + BATCH_SIZE);
@@ -204,8 +200,14 @@ export const StickerCreationTab: React.FC<StickerCreationTabProps> = ({ initialD
               try {
                   const textImageBase64 = await createTextImage(sticker.text, textImageOptions);
                   
+                  const finalPrompt = renderTemplate(stickerImageConfig.prompt, {
+                    characterDescription: selectedDesign.characterDescription,
+                    customPrompt: customStickerPrompt,
+                    decorationStyle: selectedDecoration
+                  });
+
                   const payload: StickerGenerationPayload = {
-                    prompt,
+                    prompt: finalPrompt,
                     images: [selectedDesign.imageBase64, textImageBase64],
                   };
 
@@ -213,7 +215,8 @@ export const StickerCreationTab: React.FC<StickerCreationTabProps> = ({ initialD
                     selectedDesign.imageBase64, 
                     textImageBase64,
                     selectedDesign.characterDescription, 
-                    customStickerPrompt
+                    customStickerPrompt,
+                    selectedDecoration
                   );
                   setStickers(prev => prev.map(s => s.id === sticker.id ? { ...s, image: imageBase64, fileName, status: 'done', generationPayload: payload } : s));
               } catch (e) {
